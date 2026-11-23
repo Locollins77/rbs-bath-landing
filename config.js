@@ -2,7 +2,7 @@
 window.RBS_CONFIG = {
   // Zapier "Catch Hook" URL (Webhooks by Zapier > Catch Hook). Leave blank until it exists.
   // While blank the form will not submit (it tells people to call), unless the URL ends in ?test=1.
-  WEBHOOK_URL: "",
+  WEBHOOK_URL: "https://hooks.zapier.com/hooks/catch/20921842/45cpvqx/",
 
   // Meta pixel. 957697473160510 = "Rainbow Seamless Systems's Pixel Main" (carries both sites).
   // Loaded directly by this page. Do NOT also add a Meta tag through GTM or Lead fires twice.
