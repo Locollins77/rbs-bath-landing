@@ -1,0 +1,11 @@
+# Full-size originals. Too big for GitHub Pages, and the page doesn't use them.
+photos/
+*.psd
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Internal notes, keep off the public repo
+CLAUDE.md
+START-HERE.txt
+gtm/
