@@ -4,35 +4,68 @@
   var PREVIEW = !LIVE;
   var CONSENT = "By tapping Get My Free Quote, you agree that Rainbow Bath & Shower may call or text you at this number about your free in-home quote, including with automated technology. Consent is not a condition of purchase. Message and data rates may apply. Reply STOP to opt out.";
 
-  // ---------- tracking (Meta pixel + optional Google tag) ----------
+  // ---------- tracking ----------
+  // Two modes, never both (so nothing double counts):
+  //  - GTM mode (CFG.GTM_ID set): the page loads Google Tag Manager and only pushes dataLayer events.
+  //    The Meta pixel and GA4 are tags inside that GTM container (see gtm/ folder).
+  //  - Direct mode (no GTM_ID): the page loads the Meta pixel itself (and GA4 if GA4_ID is set).
+  // Previews (any host not in LIVE_HOSTS) load nothing.
+  // Never put product, "who it's for" or any health/mobility answer into tracking.
+  var GTM = !!CFG.GTM_ID && !PREVIEW;
+  var IS_TY = document.body.getAttribute("data-page") === "thank-you";
+  window.dataLayer = window.dataLayer || [];
+
+  // On the thank-you page, pick up the lead's contact details (stored at submit, removed right after)
+  // for Meta advanced matching. Meta hashes them in the browser before sending.
+  var ud = null, eid = "";
+  if (IS_TY) {
+    try {
+      eid = sessionStorage.getItem("rbs_event_id") || "";
+      ud = JSON.parse(sessionStorage.getItem("rbs_ud") || "null");
+      sessionStorage.removeItem("rbs_event_id"); sessionStorage.removeItem("rbs_ud"); // reloads don't double count
+    } catch (e) {}
+  }
+  if (GTM && ud) dataLayer.push({ user_data: ud }); // must be in the dataLayer before GTM's first tags run
+
+  function loadGTM() {
+    dataLayer.push({ "gtm.start": new Date().getTime(), event: "gtm.js" });
+    var s = document.createElement("script"); s.async = true;
+    s.src = "https://www.googletagmanager.com/gtm.js?id=" + encodeURIComponent(CFG.GTM_ID);
+    document.head.appendChild(s);
+  }
   function loadPixel() {
-    if (!CFG.PIXEL_ID || window.fbq || PREVIEW) return; // no Meta data from previews
+    if (!CFG.PIXEL_ID || window.fbq) return;
     !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
-    fbq('init', CFG.PIXEL_ID);
-    fbq('trackSingle', CFG.PIXEL_ID, 'PageView');
+    if (ud) fbq("init", CFG.PIXEL_ID, ud); else fbq("init", CFG.PIXEL_ID);
+    fbq("trackSingle", CFG.PIXEL_ID, "PageView");
   }
   function loadGtag() {
-    if (!CFG.GA4_ID || PREVIEW) return;
-    var s = document.createElement('script'); s.async = true;
-    s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(CFG.GA4_ID);
+    if (!CFG.GA4_ID) return;
+    var s = document.createElement("script"); s.async = true;
+    s.src = "https://www.googletagmanager.com/gtag/js?id=" + encodeURIComponent(CFG.GA4_ID);
     document.head.appendChild(s);
-    window.dataLayer = window.dataLayer || [];
     window.gtag = function () { dataLayer.push(arguments); };
-    gtag('js', new Date()); gtag('config', CFG.GA4_ID);
+    gtag("js", new Date()); gtag("config", CFG.GA4_ID);
   }
-  try { loadPixel(); loadGtag(); } catch (e) {}
-  function track(name) { // generic events only: never send product or "who is it for" answers to Meta
-    try { if (window.fbq && CFG.PIXEL_ID) fbq('trackSingleCustom', CFG.PIXEL_ID, name); } catch (e) {}
-    try { if (window.gtag) gtag('event', name); } catch (e) {}
+  try { if (GTM) loadGTM(); else if (!PREVIEW) { loadPixel(); loadGtag(); } } catch (e) {}
+
+  // metaName: StartQuote / ReadFAQ / BeforeAfter. GTM and GA4 get the snake_case name.
+  var GA_NAME = { StartQuote: "start_quote", ReadFAQ: "read_faq", BeforeAfter: "before_after" };
+  function track(metaName) {
+    if (PREVIEW) return;
+    if (GTM) { dataLayer.push({ event: GA_NAME[metaName], meta_event: metaName }); return; }
+    try { if (window.fbq && CFG.PIXEL_ID) fbq("trackSingleCustom", CFG.PIXEL_ID, metaName); } catch (e) {}
+    try { if (window.gtag) gtag("event", GA_NAME[metaName]); } catch (e) {}
   }
 
-  // ---------- thank-you page: fire Lead once, with the same event_id sent to Zapier ----------
-  if (document.body.getAttribute('data-page') === 'thank-you') {
-    var eid = ''; try { eid = sessionStorage.getItem('rbs_event_id') || ''; } catch (e) {}
-    if (eid) {
-      try { if (window.fbq) fbq('trackSingle', CFG.PIXEL_ID, 'Lead', {}, { eventID: eid }); } catch (e) {}
-      try { if (window.gtag) gtag('event', 'generate_lead'); } catch (e) {}
-      try { sessionStorage.removeItem('rbs_event_id'); } catch (e) {} // reloads don't double count
+  // ---------- thank-you page: fire Lead once, with the same event_id sent to Zapier (for CAPI dedup) ----------
+  if (IS_TY) {
+    if (eid && !PREVIEW) {
+      if (GTM) dataLayer.push({ event: "generate_lead", event_id: eid });
+      else {
+        try { if (window.fbq) fbq("trackSingle", CFG.PIXEL_ID, "Lead", {}, { eventID: eid }); } catch (e) {}
+        try { if (window.gtag) gtag("event", "generate_lead"); } catch (e) {}
+      }
     }
     fillPhones();
     var pn = document.querySelector("[data-preview-note]"), wasPrev = false;
@@ -66,11 +99,11 @@
 
   // ---------- the form ----------
   var STEPS = [
-    { key: "project", q: "What would you like to do?", opts: ["Replace my tub with a walk-in shower", "Replace an old shower", "Add a walk-in tub", "Not sure yet, show me options"] },
-    { key: "for_whom", q: "Who is the new bathroom for?", opts: ["Me or my spouse", "A parent or family member"] },
-    { key: "homeowner", q: "Is the home owned (not rented)?", opts: ["Yes, it's owned", "No, it's rented"] },
-    { key: "timeline", q: "When would you like it done?", opts: ["As soon as possible", "In the next 1 to 3 months", "Just researching for now"] },
-    { key: "contact", q: "Last step: how do we reach you to set up your free quote?", type: "contact" }
+    { key: "project", q: "What Would You Like to Do?", opts: ["Replace my tub with a walk-in shower", "Replace an old shower", "Add a walk-in tub", "Not sure yet, show me options"] },
+    { key: "for_whom", q: "Who Is the New Bathroom For?", opts: ["Me or my spouse", "A parent or family member"] },
+    { key: "homeowner", q: "Is the Home Owned (Not Rented)?", opts: ["Yes, it's owned", "No, it's rented"] },
+    { key: "timeline", q: "When Would You Like It Done?", opts: ["As soon as possible", "In the next 1 to 3 months", "Just researching for now"] },
+    { key: "contact", q: "Last Step: How Do We Reach You to Set Up Your Free Quote?", type: "contact" }
   ];
   var shared = {}, started = false;
 
@@ -111,7 +144,7 @@
     }
 
     function renderZip() {
-      root.appendChild(el("p", "q", "Enter the zip code of the home"));
+      root.appendChild(el("p", "q", "Enter the Zip Code of the Home"));
       var inp = input("text", "ZIP code", "postal-code", data.zip, "ZIP code of the home");
       inp.inputMode = "numeric"; inp.maxLength = 5;
       var msg = el("div");
@@ -172,7 +205,11 @@
       }
       sending = true; btn.disabled = true; btn.textContent = "Sending…";
       var eid = "rbs-" + Date.now() + "-" + Math.random().toString(36).slice(2, 10);
-      try { sessionStorage.setItem("rbs_event_id", eid); sessionStorage.setItem("rbs_first", data.first_name); } catch (e) {}
+      try {
+        sessionStorage.setItem("rbs_event_id", eid); sessionStorage.setItem("rbs_first", data.first_name);
+        sessionStorage.setItem("rbs_ud", JSON.stringify({ em: data.email.toLowerCase(), ph: "1" + data.phone,
+          fn: data.first_name.toLowerCase(), ln: data.last_name.toLowerCase(), zp: data.zip, country: "us" }));
+      } catch (e) {}
       var payload = Object.assign({
         first_name: data.first_name, last_name: data.last_name, email: data.email, phone: data.phone,
         zip: data.zip, office: data.office, project: data.project, for_whom: data.for_whom,
