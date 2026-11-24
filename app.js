@@ -110,7 +110,7 @@
   function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   function input(type, ph, ac, val, label) {
-    var i = el("input"); i.type = type; i.placeholder = ph; i.autocomplete = ac; i.value = val || ""; i.setAttribute("aria-label", label || ph); return i;
+    var i = el("input"); i.type = type; i.placeholder = ph; i.autocomplete = ac; i.name = ({"postal-code": "zip", "given-name": "first_name", "family-name": "last_name", "email": "email", "tel": "phone"})[ac] || ac; i.value = val || ""; i.setAttribute("aria-label", label || ph); return i;
   }
 
   function Funnel(root) {
