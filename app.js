@@ -175,7 +175,7 @@
       var p = input("tel", "Phone number", "tel", data.phone); p.inputMode = "tel";
       var hp = el("input", "hp"); hp.type = "text"; hp.name = "company_website"; hp.tabIndex = -1; hp.autocomplete = "off"; hp.setAttribute("aria-hidden", "true");
       var err = el("div");
-      var b = el("button", "btn", "Get My Free Quote"); b.type = "button";
+      var b = el("button", "btn rbs-submit", "Get My Free Quote"); b.type = "button";
       root.appendChild(r); root.appendChild(m); root.appendChild(p); root.appendChild(hp); root.appendChild(err); root.appendChild(b);
       root.appendChild(el("p", "fine left", esc(CONSENT) + " See our <a href='" + CFG.PRIVACY_URL + "' target='_blank' rel='noopener'>Privacy Policy</a>."));
       function go() {
