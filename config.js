@@ -6,7 +6,7 @@ window.RBS_CONFIG = {
 
   // Meta pixel. 957697473160510 = "Rainbow Seamless Systems's Pixel Main" (carries both sites).
   // Loaded directly by this page. Do NOT also add a Meta tag through GTM or Lead fires twice.
-  PIXEL_ID: "957697473160510",
+  PIXEL_ID: "", // OFF until ads launch. Restore: "957697473160510"
 
   // Optional: Google tag for GA4 / Google Ads. Leave blank to skip.
   GA4_ID: "",
