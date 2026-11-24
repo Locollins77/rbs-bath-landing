@@ -11,6 +11,10 @@ window.RBS_CONFIG = {
   // Optional: Google tag for GA4 / Google Ads. Leave blank to skip.
   GA4_ID: "",
 
+  // Google Tag Manager container (RBS Bath Landing Page). When set, the page loads GTM and the Meta pixel
+  // and GA4 come from GTM tags instead of PIXEL_ID / GA4_ID above.
+  GTM_ID: "GTM-M5DCTKXF",
+
   // Meta landing page tracking number (bath). Calls to this number = Facebook.
   PHONE_DISPLAY: "(231) 758-5096",
   PHONE_TEL: "+12317585096",
